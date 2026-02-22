@@ -1,50 +1,104 @@
-index.html
-function generarCurso() {
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validación de Ubicación</title>
+  <style>
+    body{
+      font-family: Arial, sans-serif;
+      text-align:center;
+      padding:30px;
+    }
+    button{
+      padding:18px 28px;
+      font-size:18px;
+      margin-top:20px;
+    }
+  </style>
+</head>
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const hoja = ss.getSheetByName("Cursos");
-  const fila = hoja.getActiveRange().getRow();
+<body>
 
-  if (fila === 1) {
-    SpreadsheetApp.getUi().alert("Selecciona una fila válida.");
-    return;
-  }
+  <h2>Validando ubicación…</h2>
+  <button onclick="capturar()">Activar ubicación</button>
 
-  const datos = hoja.getRange(fila, 1, 1, 15).getValues()[0];
+  <div id="resultado" style="margin-top:25px;"></div>
 
-  const fecha = Utilities.formatDate(new Date(datos[0]), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  const clave = datos[2];
-  const sede  = String(datos[3]).replace(/\s+/g,"").toUpperCase();
+<script>
 
-  const lat    = datos[12]; // Col M
-  const lng    = datos[13]; // Col N
-  const radio  = datos[14]; // Col O
-  const activo = datos[11]; // Col L
-
-  if (!lat || !lng || !radio) {
-    SpreadsheetApp.getUi().alert("Debes capturar LATITUD, LONGITUD y RANGO_GPS_M.");
-    return;
-  }
-
-  const idCurso = `${fecha}-${clave}-${sede}`;
-
-  hoja.getRange(fila, 9).setValue(idCurso);
-
-  // 🔥 NUEVA BASE EXTERNA (GitHub Pages)
-  const webBase = "https://rescate911sp-create.github.io/validacion-pgs-curso/";
-
-  const urlGPS =
-    webBase +
-    "?curso=" + encodeURIComponent(idCurso) +
-    "&latCentro=" + lat +
-    "&lngCentro=" + lng +
-    "&radio=" + radio +
-    "&activo=" + activo;
-
-  // Generador QR estable
-  const qrURL = "https://quickchart.io/qr?size=300&text=" + encodeURIComponent(urlGPS);
-
-  hoja.getRange(fila, 11).setFormula(`=IMAGE("${qrURL}")`);
-
-  SpreadsheetApp.getUi().alert("Curso generado correctamente con validación GPS externa.");
+function obtenerParametro(nombre){
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(nombre);
 }
+
+function calcularDistancia(lat1, lon1, lat2, lon2){
+
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function capturar(){
+
+  navigator.geolocation.getCurrentPosition(function(pos){
+
+    const latUsuario = pos.coords.latitude;
+    const lngUsuario = pos.coords.longitude;
+
+    const latCentro = parseFloat(obtenerParametro("latCentro"));
+    const lngCentro = parseFloat(obtenerParametro("lngCentro"));
+    const radio = parseFloat(obtenerParametro("radio"));
+    const curso = obtenerParametro("curso");
+    const activo = obtenerParametro("activo");
+
+    if(activo !== "SI"){
+      document.getElementById("resultado").innerHTML =
+        "<h3>⚠️ Curso no activo.</h3>";
+      return;
+    }
+
+    const distancia = calcularDistancia(latUsuario,lngUsuario,latCentro,lngCentro);
+
+    if(distancia <= radio){
+
+      const formBase = "https://docs.google.com/forms/d/e/1FAIpQLScjDqB6ZXNSSQdTSZKcKnie1KO5WX8SU076Un-SoIUBBNwZNg/viewform";
+      const entryCurso = "entry.1574913457";
+
+      const formURL =
+        formBase +
+        "?usp=pp_url&" +
+        entryCurso + "=" + encodeURIComponent(curso);
+
+      document.getElementById("resultado").innerHTML =
+        "<h3>📍 Ubicación verificada</h3>" +
+        "<p>Redirigiendo al examen…</p>";
+
+      setTimeout(function(){
+        window.location.href = formURL;
+      },800);
+
+    } else {
+
+      document.getElementById("resultado").innerHTML =
+        "<h3>❌ Usted no se encuentra dentro del perímetro autorizado.</h3>";
+    }
+
+  }, function(){
+    alert("Debe permitir la ubicación.");
+  });
+
+}
+
+</script>
+
+</body>
+</html>
