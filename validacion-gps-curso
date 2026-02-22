@@ -1,0 +1,50 @@
+index.html
+function generarCurso() {
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const hoja = ss.getSheetByName("Cursos");
+  const fila = hoja.getActiveRange().getRow();
+
+  if (fila === 1) {
+    SpreadsheetApp.getUi().alert("Selecciona una fila válida.");
+    return;
+  }
+
+  const datos = hoja.getRange(fila, 1, 1, 15).getValues()[0];
+
+  const fecha = Utilities.formatDate(new Date(datos[0]), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  const clave = datos[2];
+  const sede  = String(datos[3]).replace(/\s+/g,"").toUpperCase();
+
+  const lat    = datos[12]; // Col M
+  const lng    = datos[13]; // Col N
+  const radio  = datos[14]; // Col O
+  const activo = datos[11]; // Col L
+
+  if (!lat || !lng || !radio) {
+    SpreadsheetApp.getUi().alert("Debes capturar LATITUD, LONGITUD y RANGO_GPS_M.");
+    return;
+  }
+
+  const idCurso = `${fecha}-${clave}-${sede}`;
+
+  hoja.getRange(fila, 9).setValue(idCurso);
+
+  // 🔥 NUEVA BASE EXTERNA (GitHub Pages)
+  const webBase = "https://rescate911sp-create.github.io/validacion-pgs-curso/";
+
+  const urlGPS =
+    webBase +
+    "?curso=" + encodeURIComponent(idCurso) +
+    "&latCentro=" + lat +
+    "&lngCentro=" + lng +
+    "&radio=" + radio +
+    "&activo=" + activo;
+
+  // Generador QR estable
+  const qrURL = "https://quickchart.io/qr?size=300&text=" + encodeURIComponent(urlGPS);
+
+  hoja.getRange(fila, 11).setFormula(`=IMAGE("${qrURL}")`);
+
+  SpreadsheetApp.getUi().alert("Curso generado correctamente con validación GPS externa.");
+}
