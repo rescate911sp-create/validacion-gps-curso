@@ -1,1 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Redirigiendo al examen...</title>
+</head>
 
+<body style="font-family:Arial;text-align:center;padding-top:60px;">
+
+<h2>Preparando su examen...</h2>
+<p>Espere un momento.</p>
+
+<script>
+
+// obtener parámetros de la URL
+const params = new URLSearchParams(window.location.search);
+const curso = params.get("curso");
+
+if(!curso){
+  document.body.innerHTML = "<h2>No se pudo identificar el curso.</h2>";
+}else{
+
+  const examenURL = "https://script.google.com/macros/s/AKfycbyHHB-umN2wZJPubID8PlATM8Cj4b81UEayGZQRgJ3z5hTMz-Zmg4TyWZebykagNMcMxQ/exec?curso=" + curso;
+
+  window.location.href = examenURL;
+
+}
+
+</script>
+
+</body>
+</html>
